@@ -26,6 +26,17 @@ fn generate_mutations(world: &mut MutationWorld) {
     world.mutations = registry.generate_all(source);
 }
 
+#[when(expr = "I generate mutations with operator {string}")]
+fn generate_mutations_with_operator(world: &mut MutationWorld, category: String) {
+    let source = world.source.as_ref().expect("source must be set");
+    let registry = MutatorRegistry::default_registry();
+    world.mutations = registry
+        .generate_all(source)
+        .into_iter()
+        .filter(|m| m.operator.starts_with(&format!("{}/", category)))
+        .collect();
+}
+
 #[when(expr = "I apply mutation {int}")]
 fn apply_mutation(world: &mut MutationWorld, index: usize) {
     let source = world.source.as_ref().expect("source must be set");
@@ -65,9 +76,23 @@ fn check_mutation_replacement(
     );
 }
 
+#[then(expr = "I should see a mutation with operator {string}")]
+fn check_mutation_operator(world: &mut MutationWorld, operator: String) {
+    let found = world.mutations.iter().any(|m| m.operator == operator);
+    assert!(
+        found,
+        "expected to find mutation with operator '{}', but only found: {:?}",
+        operator,
+        world.mutations.iter().map(|m| &m.operator).collect::<Vec<_>>()
+    );
+}
+
 #[then(expr = "the mutated source should be {string}")]
 fn check_mutated_source(world: &mut MutationWorld, expected: String) {
-    let actual = world.mutated_source.as_ref().expect("mutated source must be set");
+    let actual = world
+        .mutated_source
+        .as_ref()
+        .expect("mutated source must be set");
     assert_eq!(
         actual, &expected,
         "expected mutated source '{}' but got '{}'",
@@ -76,7 +101,5 @@ fn check_mutated_source(world: &mut MutationWorld, expected: String) {
 }
 
 fn main() {
-    futures::executor::block_on(
-        MutationWorld::run("../../tests/features/mutations"),
-    );
+    futures::executor::block_on(MutationWorld::run("../../tests/features/mutations"));
 }

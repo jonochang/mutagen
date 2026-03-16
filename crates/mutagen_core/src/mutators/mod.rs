@@ -1,4 +1,11 @@
 pub mod arithmetic;
+pub mod boolean;
+pub mod comparison;
+pub mod conditional;
+pub mod literal;
+mod walk;
+
+pub use walk::walk_children;
 
 use crate::parser::SourceFile;
 use std::ops::Range;
@@ -47,6 +54,10 @@ impl MutatorRegistry {
     pub fn default_registry() -> Self {
         let mut registry = Self::new();
         registry.register(Box::new(arithmetic::ArithmeticMutator));
+        registry.register(Box::new(comparison::ComparisonMutator));
+        registry.register(Box::new(boolean::BooleanMutator));
+        registry.register(Box::new(conditional::ConditionalMutator));
+        registry.register(Box::new(literal::LiteralMutator));
         registry
     }
 }
