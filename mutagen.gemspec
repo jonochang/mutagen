@@ -10,7 +10,9 @@ Gem::Specification.new do |spec|
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.0"
 
-  spec.files = Dir["lib/**/*.rb", "ext/**/*.{rs,toml}", "crates/**/*.{rs,toml}", "Cargo.toml", "LICENSE", "README.md"]
+  spec.files = Dir["lib/**/*.rb", "exe/*", "ext/**/*.{rs,toml}", "crates/**/*.{rs,toml}", "Cargo.toml", "LICENSE", "README.md"]
+  spec.bindir = "exe"
+  spec.executables = ["mutagen"]
   spec.require_paths = ["lib"]
   spec.extensions = ["ext/mutagen_ruby/Cargo.toml"]
 

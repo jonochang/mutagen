@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+require "mutagen"
+require "mutagen/runner"
+require "mutagen/config"
+
+case ARGV[0]
+when "run"
+  overrides = {}
+  args = ARGV[1..]
+
+  while args.any?
+    case args.first
+    when "--since"
+      args.shift
+      overrides["since"] = args.shift
+    when "--sample"
+      args.shift
+      overrides["sampling"] = args.shift
+    when "--shard"
+      args.shift
+      overrides["shard"] = args.shift
+    when "--operator"
+      args.shift
+      overrides["mutators"] = { "one_op" => args.shift }
+    when "--jobs", "-j"
+      args.shift
+      overrides["parallel"] = args.shift.to_i
+    when "--fail-under"
+      args.shift
+      overrides["fail_under"] = args.shift.to_i
+    when "--test-runner"
+      args.shift
+      overrides["test_runner"] = args.shift
+    when "--no-coverage"
+      args.shift
+      overrides["coverage"] = false
+    when "--no-incremental"
+      args.shift
+      overrides["incremental"] = false
+    else
+      warn "Unknown option: #{args.first}"
+      exit 1
+    end
+  end
+
+  config = Mutagen::Config.new(overrides)
+  runner = Mutagen::Runner.new(config)
+  exit runner.run
+
+when "version", "--version", "-v"
+  puts "mutagen #{Mutagen::VERSION}"
+
+when "help", "--help", "-h", nil
+  puts <<~HELP
+    Usage: mutagen <command> [options]
+
+    Commands:
+      run          Run mutation testing
+      version      Show version
+      help         Show this help
+
+    Run options:
+      --since REF          Only mutate code changed since git ref
+      --sample AMOUNT      Sample mutations (e.g. "25%" or "500")
+      --shard N/TOTAL      Run shard N of TOTAL (e.g. "1/4")
+      --operator OP        Run single operator (e.g. "arithmetic")
+      --jobs, -j N         Number of parallel workers
+      --fail-under N       Minimum mutation score (default: 80)
+      --test-runner NAME   Test runner: rspec or minitest
+      --no-coverage        Disable coverage-based filtering
+      --no-incremental     Disable incremental caching
+  HELP
+
+else
+  warn "Unknown command: #{ARGV[0]}. Run 'mutagen help' for usage."
+  exit 1
+end
