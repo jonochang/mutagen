@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.description = "A mutation testing framework with a Rust core for fast AST-level mutations and a Ruby orchestration layer."
   spec.homepage = "https://github.com/jonochang/mutagen"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1"
+  spec.required_ruby_version = ">= 3.0"
 
   spec.files = Dir["lib/**/*.rb", "ext/**/*.{rs,toml}", "crates/**/*.{rs,toml}", "Cargo.toml", "LICENSE", "README.md"]
   spec.require_paths = ["lib"]
