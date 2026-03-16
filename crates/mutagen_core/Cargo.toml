@@ -18,7 +18,12 @@ proptest = "1"
 pretty_assertions = "1"
 cucumber = { version = "0.20", features = ["macros"] }
 futures = "0.3"
+tempfile = "3"
 
 [[test]]
 name = "bdd"
+harness = false
+
+[[test]]
+name = "bdd_selector"
 harness = false
