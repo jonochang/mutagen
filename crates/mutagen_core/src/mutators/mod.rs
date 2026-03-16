@@ -1,0 +1,58 @@
+pub mod arithmetic;
+
+use crate::parser::SourceFile;
+use std::ops::Range;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Mutation {
+    pub id: String,
+    pub file: PathBuf,
+    pub line: u32,
+    pub col: u32,
+    pub operator: String,
+    pub original: String,
+    pub replacement: String,
+    pub byte_range: Range<usize>,
+}
+
+pub trait Mutator: Send + Sync {
+    fn category(&self) -> &str;
+    fn name(&self) -> &str;
+    fn generate(&self, source: &SourceFile) -> Vec<Mutation>;
+}
+
+pub struct MutatorRegistry {
+    mutators: Vec<Box<dyn Mutator>>,
+}
+
+impl MutatorRegistry {
+    pub fn new() -> Self {
+        Self {
+            mutators: Vec::new(),
+        }
+    }
+
+    pub fn register(&mut self, mutator: Box<dyn Mutator>) {
+        self.mutators.push(mutator);
+    }
+
+    pub fn generate_all(&self, source: &SourceFile) -> Vec<Mutation> {
+        self.mutators
+            .iter()
+            .flat_map(|m| m.generate(source))
+            .collect()
+    }
+
+    pub fn default_registry() -> Self {
+        let mut registry = Self::new();
+        registry.register(Box::new(arithmetic::ArithmeticMutator));
+        registry
+    }
+}
+
+impl Default for MutatorRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}

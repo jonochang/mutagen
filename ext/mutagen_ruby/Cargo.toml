@@ -1,0 +1,14 @@
+[package]
+name = "mutagen_ruby"
+version = "0.1.0"
+edition = "2021"
+description = "Ruby native extension for mutagen_core"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+mutagen_core = { path = "../../crates/mutagen_core" }
+magnus = "0.8"

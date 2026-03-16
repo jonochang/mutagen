@@ -13,6 +13,23 @@ target
 # Contains mutation testing data
 **/mutants.out*/
 
+# Ruby
+*.gem
+*.bundle
+*.so
+*.dylib
+Gemfile.lock
+tmp/
+pkg/
+lib/mutagen/mutagen_ruby.*
+
+# Nix
+result
+.direnv/
+
+# Coverage
+lcov.info
+
 # RustRover
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
