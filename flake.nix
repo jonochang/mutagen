@@ -23,6 +23,8 @@
         ruby = pkgs.ruby_3_3;
       in
       {
+        packages.default = pkgs.callPackage ./package.nix { inherit ruby; };
+
         devShells.default = pkgs.mkShell {
           buildInputs = [
             rustToolchain

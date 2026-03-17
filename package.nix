@@ -1,47 +1,86 @@
-# This file goes in nixpkgs at: pkgs/by-name/mu/mutagen/package.nix
-#
-# To get the real cargoHash, set it to lib.fakeHash, run `nix-build -A mutagen`,
-# and the error output will contain the correct hash.
 {
   lib,
+  stdenv,
   rustPlatform,
-  fetchFromGitHub,
-  pkg-config,
   ruby,
+  makeWrapper,
+  libclang,
 }:
 
-rustPlatform.buildRustPackage (finalAttrs: {
-  pname = "mutagen";
+let
   version = "0.2.0";
 
-  src = fetchFromGitHub {
-    owner = "jonochang";
-    repo = "mutagen";
-    rev = "v${finalAttrs.version}";
-    hash = lib.fakeHash;
+  nativeExtension = rustPlatform.buildRustPackage {
+    pname = "mutagen-native";
+    inherit version;
+
+    src = lib.cleanSourceWith {
+      src = ./.;
+      filter = path: type:
+        let baseName = builtins.baseNameOf path; in
+        (type == "directory") ||
+        lib.hasSuffix ".rs" baseName ||
+        lib.hasSuffix ".toml" baseName ||
+        baseName == "Cargo.lock";
+    };
+
+    cargoHash = "sha256-ysG396tf1mw/3XTIfVz2W38BGE2w5nQbgZXTY4gOJvk=";
+
+    nativeBuildInputs = [ ruby ];
+
+    LIBCLANG_PATH = "${libclang.lib}/lib";
+
+    buildPhase = ''
+      cargo build --release -p mutagen_ruby
+    '';
+
+    installPhase = ''
+      mkdir -p $out/lib
+      cp target/release/libmutagen_ruby${stdenv.hostPlatform.extensions.sharedLibrary} $out/lib/mutagen_ruby.bundle
+    '';
+
+    doCheck = false;
+  };
+in
+
+stdenv.mkDerivation {
+  pname = "mutagen";
+  inherit version;
+
+  src = lib.cleanSourceWith {
+    src = ./.;
+    filter = path: type:
+      let baseName = builtins.baseNameOf path; in
+      (type == "directory") ||
+      lib.hasSuffix ".rb" baseName ||
+      baseName == "mutagen";
   };
 
-  cargoHash = lib.fakeHash;
+  nativeBuildInputs = [ makeWrapper ];
+  buildInputs = [ ruby ];
 
-  nativeBuildInputs = [
-    pkg-config
-  ];
+  installPhase = ''
+    mkdir -p $out/lib/mutagen $out/bin
 
-  buildInputs = [
-    ruby
-  ];
+    # Copy Ruby source
+    cp -r lib/* $out/lib/
 
-  # Only test the pure Rust core crate (mutagen_ruby needs Ruby runtime)
-  cargoTestFlags = [
-    "-p" "mutagen_core"
-  ];
+    # Copy native extension
+    cp ${nativeExtension}/lib/mutagen_ruby.bundle $out/lib/mutagen/mutagen_ruby.bundle
+
+    # Copy CLI and wrap with correct RUBYLIB
+    cp exe/mutagen $out/bin/mutagen
+    chmod +x $out/bin/mutagen
+    wrapProgram $out/bin/mutagen \
+      --prefix RUBYLIB : "$out/lib" \
+      --prefix PATH : "${ruby}/bin"
+  '';
 
   meta = {
     description = "Mutation testing for Ruby, powered by Rust";
     homepage = "https://github.com/jonochang/mutagen";
-    changelog = "https://github.com/jonochang/mutagen/blob/v${finalAttrs.version}/CHANGELOG.md";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ jonochang ];
+    mainProgram = "mutagen";
     platforms = lib.platforms.unix;
   };
-})
+}
