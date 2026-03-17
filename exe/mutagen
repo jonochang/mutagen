@@ -47,6 +47,24 @@ when "run"
   runner = Mutagen::Runner.new(config)
   exit runner.run
 
+when "merge"
+  require "mutagen/reporter/json"
+  result_files = ARGV[1..]
+  if result_files.empty?
+    warn "Usage: mutagen merge <result1.json> <result2.json> ..."
+    exit 1
+  end
+
+  merged = []
+  result_files.each do |f|
+    data = JSON.parse(File.read(f), symbolize_names: true)
+    merged.concat(data[:mutations] || data)
+  end
+
+  output_path = "mutagen_merged.json"
+  Mutagen::Reporter::Json.new.write(merged, output_path)
+  puts "Merged #{merged.length} results from #{result_files.length} files into #{output_path}"
+
 when "version", "--version", "-v"
   puts "mutagen #{Mutagen::VERSION}"
 
@@ -56,6 +74,7 @@ when "help", "--help", "-h", nil
 
     Commands:
       run          Run mutation testing
+      merge        Merge sharded result files
       version      Show version
       help         Show this help
 

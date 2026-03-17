@@ -847,7 +847,7 @@ checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
 name = "mutagen_core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cucumber",
  "futures",
@@ -864,7 +864,7 @@ dependencies = [
 
 [[package]]
 name = "mutagen_ruby"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "magnus",
  "mutagen_core",

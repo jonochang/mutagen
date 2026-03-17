@@ -51,6 +51,24 @@ impl Cache {
         let cache: Cache = serde_json::from_str(&json)?;
         Ok(cache)
     }
+
+    /// Merge another cache into this one. Entries from `other` overwrite
+    /// entries in `self` if the source hash is newer (different).
+    pub fn merge(&mut self, other: &Cache) {
+        for (id, entry) in &other.runs {
+            self.runs.insert(id.clone(), entry.clone());
+        }
+    }
+
+    /// Merge multiple cache files into a single cache.
+    pub fn merge_files(paths: &[&Path]) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut merged = Cache::new();
+        for path in paths {
+            let cache = Cache::load(path)?;
+            merged.merge(&cache);
+        }
+        Ok(merged)
+    }
 }
 
 impl Default for Cache {

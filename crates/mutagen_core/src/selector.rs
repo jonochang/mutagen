@@ -1,5 +1,7 @@
 use crate::mutators::Mutation;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 /// Filter mutations to only those on lines covered by the test suite.
@@ -43,6 +45,22 @@ pub fn sample_percent(mutations: Vec<Mutation>, percent: u32) -> Vec<Mutation> {
     }
     let count = (mutations.len() as f64 * percent as f64 / 100.0).round() as usize;
     sample_count(mutations, count)
+}
+
+/// Shard mutations by stable hash. Returns shard `index` of `total` shards.
+/// `index` is 1-based (1..=total).
+pub fn shard(mutations: Vec<Mutation>, index: u32, total: u32) -> Vec<Mutation> {
+    if total <= 1 {
+        return mutations;
+    }
+    mutations
+        .into_iter()
+        .filter(|m| {
+            let mut hasher = DefaultHasher::new();
+            m.id.hash(&mut hasher);
+            (hasher.finish() % total as u64) == (index as u64 - 1)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -111,5 +129,27 @@ mod tests {
         let mutations: Vec<_> = (0..100).map(|i| make_mutation("app.rb", i)).collect();
         let sampled = sample_percent(mutations, 100);
         assert_eq!(sampled.len(), 100);
+    }
+
+    #[test]
+    fn shard_distributes_all_mutations() {
+        let mutations: Vec<_> = (0..100).map(|i| make_mutation("app.rb", i)).collect();
+        let total_shards = 4;
+        let mut all_ids: Vec<String> = Vec::new();
+        for s in 1..=total_shards {
+            let shard_mutations = shard(mutations.clone(), s, total_shards);
+            all_ids.extend(shard_mutations.into_iter().map(|m| m.id));
+        }
+        all_ids.sort();
+        let mut expected: Vec<String> = (0..100).map(|i| format!("test@app.rb:{}", i)).collect();
+        expected.sort();
+        assert_eq!(all_ids, expected);
+    }
+
+    #[test]
+    fn shard_single_returns_all() {
+        let mutations: Vec<_> = (0..10).map(|i| make_mutation("app.rb", i)).collect();
+        let result = shard(mutations.clone(), 1, 1);
+        assert_eq!(result.len(), 10);
     }
 }

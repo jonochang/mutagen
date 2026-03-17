@@ -99,6 +99,50 @@ fn sample_percent(world: &mut SelectorWorld, percent: u32) {
     world.filtered = selector::sample_percent(mutations, percent);
 }
 
+// ---- Sharding steps ----
+
+#[when(expr = "I shard into {int} with index {int}")]
+fn shard_mutations(world: &mut SelectorWorld, total: u32, index: u32) {
+    let mutations = std::mem::take(&mut world.mutations);
+    world.filtered = selector::shard(mutations, index, total);
+}
+
+#[when(expr = "I collect all {int} shards")]
+fn collect_all_shards(world: &mut SelectorWorld, total: u32) {
+    let mutations = world.mutations.clone();
+    let mut all = Vec::new();
+    for i in 1..=total {
+        all.extend(selector::shard(mutations.clone(), i, total));
+    }
+    world.filtered = all;
+}
+
+#[then(expr = "I should have between {int} and {int} remaining mutations")]
+fn check_remaining_range(world: &mut SelectorWorld, min: usize, max: usize) {
+    let len = world.filtered.len();
+    assert!(
+        len >= min && len <= max,
+        "expected between {} and {} remaining but got {}",
+        min,
+        max,
+        len
+    );
+}
+
+#[then(expr = "all {int} mutations should be covered")]
+fn check_all_covered(world: &mut SelectorWorld, expected: usize) {
+    let mut ids: Vec<String> = world.filtered.iter().map(|m| m.id.clone()).collect();
+    ids.sort();
+    ids.dedup();
+    assert_eq!(
+        ids.len(),
+        expected,
+        "expected {} unique mutations but got {}",
+        expected,
+        ids.len()
+    );
+}
+
 // ---- Cache steps ----
 
 #[given(expr = "a cached result for mutation {string} with status {string} and source hash {string}")]

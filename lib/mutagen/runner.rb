@@ -32,7 +32,13 @@ module Mutagen
         end
       end
 
-      # 3. Apply sampling
+      # 3. Apply sharding
+      if @config["shard"]
+        mutations = apply_shard(mutations)
+        puts "After sharding: #{mutations.length} mutations"
+      end
+
+      # 4. Apply sampling
       mutations = apply_sampling(mutations)
 
       if mutations.empty?
@@ -124,6 +130,16 @@ module Mutagen
         mutations.sample([count, mutations.length].min)
       else
         mutations
+      end
+    end
+
+    def apply_shard(mutations)
+      shard_spec = @config["shard"].to_s
+      index, total = shard_spec.split("/").map(&:to_i)
+      return mutations if total <= 1
+
+      mutations.select do |m|
+        m[:id].hash.abs % total == (index - 1)
       end
     end
 

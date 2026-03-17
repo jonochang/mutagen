@@ -1,3 +1,4 @@
+pub mod batch;
 pub mod codegen;
 pub mod mutators;
 pub mod parser;
