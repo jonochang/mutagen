@@ -45,10 +45,19 @@ impl MutatorRegistry {
     }
 
     pub fn generate_all(&self, source: &SourceFile) -> Vec<Mutation> {
-        self.mutators
+        let mut mutations: Vec<Mutation> = self.mutators
             .iter()
             .flat_map(|m| m.generate(source))
-            .collect()
+            .collect();
+
+        // Fill in line/col from byte offsets
+        for m in &mut mutations {
+            let (line, col) = source.byte_offset_to_line_col(m.byte_range.start);
+            m.line = line;
+            m.col = col;
+        }
+
+        mutations
     }
 
     pub fn default_registry() -> Self {

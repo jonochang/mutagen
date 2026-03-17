@@ -9,7 +9,7 @@
 }:
 
 let
-  version = "0.2.1";
+  version = "0.3.0";
 
   nativeExtension = rustPlatform.buildRustPackage {
     pname = "mutagen-native";
@@ -25,7 +25,7 @@ let
         baseName == "Cargo.lock";
     };
 
-    cargoHash = "sha256-ujjrlUsrPeItT9VerLgVPm2BVK8KrU535rxgJj9y7zI=";
+    cargoHash = "sha256-xOTyumA6dqBD4vzq5hBH2h+kbM6UgHTVNpbvZtaqGag=";
 
     nativeBuildInputs = [ ruby ];
 

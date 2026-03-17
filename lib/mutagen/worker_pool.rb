@@ -1,3 +1,5 @@
+require "fileutils"
+
 module Mutagen
   class WorkerPool
     Result = Struct.new(:mutation, :status, :killing_test, :duration_ms, keyword_init: true)
@@ -65,9 +67,12 @@ module Mutagen
       }
 
       original_file = mutation[:file]
-      original_source = File.read(original_file)
+      backup_file = "#{original_file}.mutagen_backup"
 
       begin
+        # Create a backup on disk so we can always restore
+        FileUtils.cp(original_file, backup_file)
+
         # Replace original file with mutated source
         File.write(original_file, mutation[:mutated_source])
 
@@ -121,8 +126,10 @@ module Mutagen
           duration_ms: duration
         )
       ensure
-        # Always restore the original file
-        File.write(original_file, original_source)
+        # Always restore from backup
+        if File.exist?(backup_file)
+          FileUtils.mv(backup_file, original_file)
+        end
       end
     end
   end

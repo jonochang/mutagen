@@ -18,6 +18,21 @@ impl std::fmt::Debug for SourceFile {
 }
 
 impl SourceFile {
+    /// Convert a byte offset into 1-based (line, col).
+    pub fn byte_offset_to_line_col(&self, offset: usize) -> (u32, u32) {
+        let mut line = 1u32;
+        let mut col = 1u32;
+        for &b in &self.source[..offset.min(self.source.len())] {
+            if b == b'\n' {
+                line += 1;
+                col = 1;
+            } else {
+                col += 1;
+            }
+        }
+        (line, col)
+    }
+
     pub fn parse(path: PathBuf, source: Vec<u8>) -> Self {
         let options = ParserOptions {
             buffer_name: path.to_string_lossy().to_string(),

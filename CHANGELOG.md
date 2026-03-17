@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0] - 2026-03-17
+
+### Fixed
+
+- Fix mutation execution: swap source files in-place with backup/restore instead of broken load path hack
+- Detect command-not-found (exit 127/126) as errors instead of false "killed" results
+- Add baseline check to fail early when test runner is missing or tests fail without mutations
+- Fix line/col always being 0 in mutation reports — now computed from byte offsets
+
+### Added
+
+- Survived mutations detail in console report showing file, line, operator, and change for each surviving mutation
+- JSON report automatically saved to `mutagen_results.json` after each run
+- Per-file mutex locking for safe parallel mutation of shared source files
+- File backup on disk (`.mutagen_backup`) for crash-safe restoration
+- `LIBCLANG_PATH` and `BINDGEN_EXTRA_CLANG_ARGS` in nix dev shell for native extension builds
+- 33 new RSpec specs (55 total): worker pool, console reporter, JSON reporter, config YAML loading, test runners, runner baseline/sampling/threshold
+
 ## [0.2.1] - 2026-03-17
 
 ### Fixed

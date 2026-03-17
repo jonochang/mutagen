@@ -74,7 +74,11 @@ module Mutagen
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
       score = Reporter::Console.new.report(results, total_duration: duration)
 
-      # 6. Check threshold
+      # 6. Save JSON report
+      Reporter::Json.new.report(results, output_path: "mutagen_results.json")
+      puts "Results saved to mutagen_results.json"
+
+      # 7. Check threshold
       threshold = @config["fail_under"]
       if score < threshold
         puts ""
