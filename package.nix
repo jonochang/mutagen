@@ -5,6 +5,7 @@
   ruby,
   makeWrapper,
   libclang,
+  apple-sdk ? null,
 }:
 
 let
@@ -29,6 +30,15 @@ let
     nativeBuildInputs = [ ruby ];
 
     LIBCLANG_PATH = "${libclang.lib}/lib";
+
+    # bindgen needs C standard library headers (stdio.h etc.)
+    # On macOS, these come from the Apple SDK.
+    BINDGEN_EXTRA_CLANG_ARGS = lib.optionalString stdenv.hostPlatform.isDarwin
+      (let sdk = apple-sdk; in
+        if sdk != null then
+          "-isysroot ${sdk}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+        else
+          "");
 
     buildPhase = ''
       cargo build --release -p mutagen_ruby
