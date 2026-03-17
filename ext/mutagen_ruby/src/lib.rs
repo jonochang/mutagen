@@ -8,6 +8,9 @@ fn generate_mutations(ruby: &Ruby, source_code: String, file_path: String) -> Re
 
     let registry = mutagen_core::mutators::MutatorRegistry::default_registry();
     let mutations = registry.generate_all(&source_file);
+    let mutations = mutagen_core::filters::deduplicate(mutations);
+    let mutations = mutagen_core::filters::filter_dead_code(mutations, &source_file);
+    let mutations = mutagen_core::filters::filter_require_statements(mutations, &source_file);
 
     let results = ruby.ary_new_capa(mutations.len());
 

@@ -8,7 +8,7 @@ pub mod literal;
 pub mod regex;
 pub mod return_val;
 pub mod statement;
-mod walk;
+pub mod walk;
 
 pub use walk::walk_children;
 

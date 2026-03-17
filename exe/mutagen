@@ -42,6 +42,9 @@ when "run"
     when "--no-incremental"
       args.shift
       overrides["incremental"] = false
+    when "--resume"
+      args.shift
+      overrides["resume"] = true
     else
       warn "Unknown option: #{args.first}"
       exit 1
@@ -94,6 +97,7 @@ when "help", "--help", "-h", nil
       --test-runner NAME   Test runner: rspec or minitest
       --no-coverage        Disable coverage-based filtering
       --no-incremental     Disable incremental caching
+      --resume             Resume from previous mutagen_results.json
   HELP
 
 else

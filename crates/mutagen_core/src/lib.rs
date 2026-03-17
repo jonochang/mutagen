@@ -1,5 +1,6 @@
 pub mod batch;
 pub mod codegen;
+pub mod filters;
 pub mod mutators;
 pub mod parser;
 pub mod selector;

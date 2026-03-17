@@ -1,3 +1,4 @@
+require "json"
 require_relative "config"
 require_relative "coverage"
 require_relative "worker_pool"
@@ -53,10 +54,27 @@ module Mutagen
         return 0
       end
 
+      # 4b. Resume: load previous results and skip already-tested mutations
+      previous_results = []
+      if @config["resume"]
+        previous_results, mutations = load_resume_data(mutations)
+        if mutations.empty?
+          puts "All #{previous_results.length} mutations already tested (resume mode)."
+          results = previous_results
+          duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
+          score = Reporter::Console.new.report(results, total_duration: duration)
+          Reporter::Json.new.report(results, output_path: "mutagen_results.json")
+          Reporter::Html.new.report(results, output_path: "mutagen_report.html")
+          puts "Results saved to mutagen_results.json and mutagen_report.html"
+          return score < @config["fail_under"] ? 1 : 0
+        end
+        puts "Resume: #{previous_results.length} cached, #{mutations.length} remaining"
+      end
+
       puts "Testing #{mutations.length} mutations with #{@config.parallel_workers} workers..."
       puts ""
 
-      # 4. Baseline check — ensure test suite passes without mutations
+      # 5. Baseline check — ensure test suite passes without mutations
       test_runner = build_test_runner
       baseline = test_runner.baseline_run
       unless baseline[:success]
@@ -68,14 +86,14 @@ module Mutagen
         return 1
       end
 
-      # 5. Execute mutations
+      # 6. Execute mutations
       pool = WorkerPool.new(
         workers: @config.parallel_workers,
         test_runner: test_runner,
         timeout_multiplier: @config["timeout_multiplier"]
       )
 
-      results = pool.run(mutations)
+      results = previous_results + pool.run(mutations)
 
       # 5. Report results
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
@@ -104,7 +122,23 @@ module Mutagen
       mutations = []
 
       target_files.each do |file|
-        source = File.read(file)
+        # Edge case: skip empty files
+        next if File.zero?(file)
+
+        # Edge case: skip very large files (>1MB)
+        if File.size(file) > 1_048_576
+          warn "Warning: skipping #{file} (>1MB)"
+          next
+        end
+
+        source = File.read(file, encoding: "UTF-8")
+
+        # Edge case: skip files with invalid encoding
+        unless source.valid_encoding?
+          warn "Warning: skipping #{file} (invalid UTF-8 encoding)"
+          next
+        end
+
         begin
           file_mutations = Mutagen::Native.generate_mutations(source, file)
           file_mutations.each do |m|
@@ -216,6 +250,46 @@ module Mutagen
 
       mutations.select do |m|
         m[:id].hash.abs % total == (index - 1)
+      end
+    end
+
+    def load_resume_data(mutations)
+      results_path = "mutagen_results.json"
+      previous_results = []
+
+      if File.exist?(results_path)
+        data = JSON.parse(File.read(results_path))
+        completed_ids = {}
+
+        (data["files"] || {}).each do |file, file_data|
+          (file_data["mutants"] || []).each do |mutant|
+            completed_ids[mutant["id"]] = {
+              status: mutant["status"].downcase,
+              operator: mutant["mutatorName"],
+              replacement: mutant["replacement"]
+            }
+          end
+        end
+
+        remaining = []
+        mutations.each do |m|
+          cached = completed_ids[m[:id]]
+          if cached
+            result = WorkerPool::Result.new(
+              mutation: m,
+              status: cached[:status],
+              killing_test: nil,
+              duration_ms: 0
+            )
+            previous_results << result
+          else
+            remaining << m
+          end
+        end
+
+        [previous_results, remaining]
+      else
+        [[], mutations]
       end
     end
 
