@@ -49,8 +49,19 @@ module Mutagen
       puts "Testing #{mutations.length} mutations with #{@config.parallel_workers} workers..."
       puts ""
 
-      # 4. Execute mutations
+      # 4. Baseline check — ensure test suite passes without mutations
       test_runner = build_test_runner
+      baseline = test_runner.baseline_run
+      unless baseline[:success]
+        if baseline[:exit_code] == 127
+          warn "ERROR: Test runner command not found. Is rspec/minitest installed?"
+        else
+          warn "ERROR: Baseline test suite failed (exit #{baseline[:exit_code]}). Fix your tests before running mutation testing."
+        end
+        return 1
+      end
+
+      # 5. Execute mutations
       pool = WorkerPool.new(
         workers: @config.parallel_workers,
         test_runner: test_runner,

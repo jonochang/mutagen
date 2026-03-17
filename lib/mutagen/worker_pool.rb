@@ -28,6 +28,9 @@ module Mutagen
 
     def run_parallel(queue, results)
       mutex = Mutex.new
+      # Per-file locks to prevent concurrent mutation of the same file
+      @file_locks = Hash.new { |h, k| h[k] = Mutex.new }
+      @file_locks_mutex = Mutex.new
       mutation_queue = Queue.new
       queue.each { |m| mutation_queue << m }
 
@@ -40,8 +43,11 @@ module Mutagen
               break
             end
 
-            result = execute_mutation(mutation, worker_id: worker_id)
-            mutex.synchronize { results << result }
+            file_lock = @file_locks_mutex.synchronize { @file_locks[mutation[:file]] }
+            file_lock.synchronize do
+              result = execute_mutation(mutation, worker_id: worker_id)
+              mutex.synchronize { results << result }
+            end
           end
         end
       end
@@ -58,21 +64,15 @@ module Mutagen
         "MUTAGEN_ID" => mutation[:id]
       }
 
-      # Write mutated source to a tempfile
-      require "tempfile"
-      tmpfile = Tempfile.new(["mutagen", ".rb"])
-      tmpfile.write(mutation[:mutated_source])
-      tmpfile.close
+      original_file = mutation[:file]
+      original_source = File.read(original_file)
 
       begin
-        pid = nil
-        result = nil
+        # Replace original file with mutated source
+        File.write(original_file, mutation[:mutated_source])
 
-        # Fork to isolate the mutant execution
         pid = Process.fork do
           ENV.update(env)
-          # Replace the original file in load path
-          $LOAD_PATH.unshift(File.dirname(tmpfile.path))
           exec("bundle", "exec", "rspec", "--fail-fast", "--format", "progress",
                *Array(mutation[:test_files]))
         end
@@ -94,9 +94,20 @@ module Mutagen
           _, status = thread.value
           duration = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000).round
 
+          mutation_status = if status.success?
+            "survived"
+          elsif status.exitstatus == 127 || status.exitstatus == 126
+            # 127 = command not found, 126 = permission denied / not executable
+            "error"
+          elsif status.termsig
+            "error"
+          else
+            "killed"
+          end
+
           Result.new(
             mutation: mutation,
-            status: status.success? ? "survived" : "killed",
+            status: mutation_status,
             killing_test: nil,
             duration_ms: duration
           )
@@ -110,7 +121,8 @@ module Mutagen
           duration_ms: duration
         )
       ensure
-        tmpfile&.unlink
+        # Always restore the original file
+        File.write(original_file, original_source)
       end
     end
   end

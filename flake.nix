@@ -37,6 +37,7 @@
             pkgs.pkg-config
             pkgs.openssl
             pkgs.libyaml
+            pkgs.libclang.lib
 
             # Cargo dev tools
             pkgs.cargo-nextest
@@ -52,6 +53,12 @@
             OPENSSL_DIR = "${pkgs.openssl.dev}";
             OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
             OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
+            LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+            BINDGEN_EXTRA_CLANG_ARGS =
+              if pkgs.stdenv.hostPlatform.isDarwin then
+                "-isysroot ${pkgs.apple-sdk or ""}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+              else
+                "-isystem ${pkgs.stdenv.cc.libc.dev}/include";
           };
         };
       }
