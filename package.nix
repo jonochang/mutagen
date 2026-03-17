@@ -9,7 +9,7 @@
 }:
 
 let
-  version = "0.2.0";
+  version = "0.2.1";
 
   nativeExtension = rustPlatform.buildRustPackage {
     pname = "mutagen-native";
@@ -25,20 +25,22 @@ let
         baseName == "Cargo.lock";
     };
 
-    cargoHash = "sha256-ysG396tf1mw/3XTIfVz2W38BGE2w5nQbgZXTY4gOJvk=";
+    cargoHash = "sha256-ujjrlUsrPeItT9VerLgVPm2BVK8KrU535rxgJj9y7zI=";
 
     nativeBuildInputs = [ ruby ];
 
     LIBCLANG_PATH = "${libclang.lib}/lib";
 
     # bindgen needs C standard library headers (stdio.h etc.)
-    # On macOS, these come from the Apple SDK.
-    BINDGEN_EXTRA_CLANG_ARGS = lib.optionalString stdenv.hostPlatform.isDarwin
-      (let sdk = apple-sdk; in
-        if sdk != null then
-          "-isysroot ${sdk}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
-        else
-          "");
+    BINDGEN_EXTRA_CLANG_ARGS =
+      if stdenv.hostPlatform.isDarwin then
+        (let sdk = apple-sdk; in
+          if sdk != null then
+            "-isysroot ${sdk}/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+          else
+            "")
+      else
+        "-isystem ${stdenv.cc.libc.dev}/include";
 
     buildPhase = ''
       cargo build --release -p mutagen_ruby

@@ -1,6 +1,6 @@
 [package]
 name = "mutagen_core"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Core mutation testing engine for Ruby source code"
 license = "MIT"

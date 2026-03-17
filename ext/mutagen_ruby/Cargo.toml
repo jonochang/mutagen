@@ -1,6 +1,6 @@
 [package]
 name = "mutagen_ruby"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Ruby native extension for mutagen_core"
 license = "MIT"

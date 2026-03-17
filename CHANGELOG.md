@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-03-17
+
+### Fixed
+
+- Fix nix package build on Linux: provide glibc headers to bindgen via `BINDGEN_EXTRA_CLANG_ARGS`
+
 ## [0.2.0] - 2026-03-17
 
 ### Added
