@@ -1,8 +1,13 @@
 pub mod arithmetic;
+pub mod assignment;
+pub mod block;
 pub mod boolean;
 pub mod comparison;
 pub mod conditional;
 pub mod literal;
+pub mod regex;
+pub mod return_val;
+pub mod statement;
 mod walk;
 
 pub use walk::walk_children;
@@ -67,6 +72,11 @@ impl MutatorRegistry {
         registry.register(Box::new(boolean::BooleanMutator));
         registry.register(Box::new(conditional::ConditionalMutator));
         registry.register(Box::new(literal::LiteralMutator));
+        registry.register(Box::new(assignment::AssignmentMutator));
+        registry.register(Box::new(return_val::ReturnMutator));
+        registry.register(Box::new(statement::StatementMutator));
+        registry.register(Box::new(block::BlockMutator));
+        registry.register(Box::new(regex::RegexMutator));
         registry
     }
 }
