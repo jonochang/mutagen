@@ -21,7 +21,12 @@ when "run"
       overrides["shard"] = args.shift
     when "--operator"
       args.shift
-      overrides["mutators"] = { "one_op" => args.shift }
+      overrides["mutators"] = (overrides["mutators"] || {}).merge("one_op" => args.shift)
+    when "--disable-operator"
+      args.shift
+      overrides["mutators"] ||= {}
+      overrides["mutators"]["disabled_operators"] ||= []
+      overrides["mutators"]["disabled_operators"] << args.shift
     when "--jobs", "-j"
       args.shift
       overrides["parallel"] = args.shift.to_i
@@ -83,6 +88,7 @@ when "help", "--help", "-h", nil
       --sample AMOUNT      Sample mutations (e.g. "25%" or "500")
       --shard N/TOTAL      Run shard N of TOTAL (e.g. "1/4")
       --operator OP        Run single operator (e.g. "arithmetic")
+      --disable-operator OP  Disable an operator (repeatable)
       --jobs, -j N         Number of parallel workers
       --fail-under N       Minimum mutation score (default: 80)
       --test-runner NAME   Test runner: rspec or minitest

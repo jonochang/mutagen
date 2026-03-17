@@ -14,7 +14,7 @@ RSpec.describe Mutagen::Config do
 
     it "includes all default mutator operators" do
       config = Mutagen::Config.new
-      expect(config["mutators"]["enabled"]).to eq(%w[arithmetic comparison boolean conditional literal])
+      expect(config["mutators"]["enabled"]).to eq(%w[arithmetic comparison boolean conditional literal assignment return_val statement block regex])
     end
 
     it "has default include patterns" do

@@ -3,6 +3,7 @@ require_relative "coverage"
 require_relative "worker_pool"
 require_relative "reporter/console"
 require_relative "reporter/json"
+require_relative "reporter/html"
 
 module Mutagen
   class Runner
@@ -20,6 +21,12 @@ module Mutagen
         puts "No mutations generated."
         return 0
       end
+
+      # 1b. Filter by enabled operators
+      mutations = filter_by_operators(mutations)
+
+      # 1c. Filter by inline ignore comments
+      mutations = filter_by_ignore_comments(mutations)
 
       puts "Generated #{mutations.length} mutations across #{mutations.map { |m| m[:file] }.uniq.length} files"
 
@@ -74,9 +81,10 @@ module Mutagen
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
       score = Reporter::Console.new.report(results, total_duration: duration)
 
-      # 6. Save JSON report
+      # 6. Save reports
       Reporter::Json.new.report(results, output_path: "mutagen_results.json")
-      puts "Results saved to mutagen_results.json"
+      Reporter::Html.new.report(results, output_path: "mutagen_report.html")
+      puts "Results saved to mutagen_results.json and mutagen_report.html"
 
       # 7. Check threshold
       threshold = @config["fail_under"]
@@ -122,7 +130,60 @@ module Mutagen
         exclude_patterns.any? { |p| File.fnmatch(p, f) }
       end
 
+      # Filter by git diff if --since is set
+      if @config["since"]
+        ref = @config["since"]
+        changed = `git diff --name-only #{ref} 2>/dev/null`.split("\n").map(&:strip)
+        changed.concat(`git diff --name-only --cached #{ref} 2>/dev/null`.split("\n").map(&:strip))
+        changed.uniq!
+        files &= changed
+        puts "After --since #{ref} filter: #{files.length} files"
+      end
+
       files.uniq.sort
+    end
+
+    def filter_by_operators(mutations)
+      mutators_config = @config["mutators"]
+      return mutations unless mutators_config
+
+      # --operator flag: run only one operator
+      if mutators_config["one_op"]
+        op = mutators_config["one_op"]
+        return mutations.select { |m| m[:operator].start_with?(op) }
+      end
+
+      enabled = mutators_config["enabled"]
+      disabled = mutators_config["disabled_operators"] || []
+
+      mutations.select do |m|
+        category = m[:operator].split("/").first
+        enabled.include?(category) && !disabled.include?(category)
+      end
+    end
+
+    def filter_by_ignore_comments(mutations)
+      pattern = @config["ignore_pattern"]
+      return mutations unless pattern
+
+      # Cache file contents to avoid re-reading
+      file_lines = {}
+
+      mutations.reject do |m|
+        file = m[:file]
+        line = m[:line]
+        next false if line == 0
+
+        file_lines[file] ||= begin
+          File.readlines(file)
+        rescue
+          []
+        end
+
+        lines = file_lines[file]
+        line_text = lines[line - 1]
+        line_text && line_text.include?(pattern)
+      end
     end
 
     def filter_by_coverage(mutations, coverage_map)

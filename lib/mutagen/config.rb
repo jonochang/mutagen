@@ -4,7 +4,7 @@ module Mutagen
   class Config
     DEFAULTS = {
       "mutators" => {
-        "enabled" => %w[arithmetic comparison boolean conditional literal],
+        "enabled" => %w[arithmetic comparison boolean conditional literal assignment return_val statement block regex],
         "disabled_operators" => [],
         "one_op" => nil
       },
@@ -28,7 +28,7 @@ module Mutagen
     attr_reader :settings
 
     def initialize(overrides = {})
-      @settings = DEFAULTS.merge(load_file).merge(overrides)
+      @settings = deep_merge(DEFAULTS, deep_merge(load_file, overrides))
     end
 
     def [](key)
@@ -47,6 +47,16 @@ module Mutagen
       return {} unless File.exist?(path)
 
       YAML.safe_load(File.read(path)) || {}
+    end
+
+    def deep_merge(base, override)
+      base.merge(override) do |_key, old_val, new_val|
+        if old_val.is_a?(Hash) && new_val.is_a?(Hash)
+          deep_merge(old_val, new_val)
+        else
+          new_val
+        end
+      end
     end
 
     def processor_count
