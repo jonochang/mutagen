@@ -44,9 +44,12 @@ let
       cargo build --release -p mutagen_ruby
     '';
 
-    installPhase = ''
+    installPhase = let
+      # Ruby loads .bundle on macOS, .so on Linux
+      extSuffix = if stdenv.hostPlatform.isDarwin then "bundle" else "so";
+    in ''
       mkdir -p $out/lib
-      cp target/release/libmutagen_ruby${stdenv.hostPlatform.extensions.sharedLibrary} $out/lib/mutagen_ruby.bundle
+      cp target/release/libmutagen_ruby${stdenv.hostPlatform.extensions.sharedLibrary} $out/lib/mutagen_ruby.${extSuffix}
     '';
 
     doCheck = false;
@@ -75,8 +78,8 @@ stdenv.mkDerivation {
     # Copy Ruby source
     cp -r lib/* $out/lib/
 
-    # Copy native extension
-    cp ${nativeExtension}/lib/mutagen_ruby.bundle $out/lib/mutagen/mutagen_ruby.bundle
+    # Copy native extension (.bundle on macOS, .so on Linux)
+    cp ${nativeExtension}/lib/mutagen_ruby.* $out/lib/mutagen/
 
     # Copy CLI and wrap with correct RUBYLIB
     cp exe/mutagen $out/bin/mutagen
